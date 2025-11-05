@@ -1,9 +1,9 @@
 
 all:
-	gcc -Wall -g -shared -fPIC allocator.c -o libmyalloc.so -ldl
+	clang -Wall -g -shared -fPIC allocator.c -o libmyalloc.so -ldl
 
 run:
-	gcc -Wall -g -o simple_test simple_test.c
+	clang -Wall -g -o simple_test simple_test.c
 	set environment LD_PRELOAD=./libmyalloc.so ./simple_test
 	./simple_test
 

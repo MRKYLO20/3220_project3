@@ -3,20 +3,30 @@
 #include <stdlib.h>
 #include <sys/mman.h>
 #include <string.h>
+#include <stdio.h>
+#include <math.h>
 
 #define PAGENUMMAX 10
+#define PAGESIZE 4096
 
-typedef struct pageSizer {
-    int pageSize;
+typedef struct sizeNode {
+    int size;
     int * ptr;
-} pageSizer;
+} sizeNode;
 
-pageSizer pageSizeTable[PAGENUMMAX];
+sizeNode sizeTable[PAGENUMMAX];
 
-/*for (int i = 0; i < PAGENUMMAX; i++) {
-    pageSizeTable[i].pageSize = 2**(i + 1);
-    pageSizeTable[i].ptr = NULL;
-}*/
+void __attribute__((constructor)) library_init() {
+    printf("Loading library.\n");
+    for (int i = 0; i < PAGENUMMAX; i++) {
+        sizeTable[i].size = pow(i + 1, 2);
+        sizeTable[i].ptr = NULL;
+    }
+}
+
+void __attribute__((destructor)) library_cleanup() {
+    printf("Unloading library.\n");
+}
 
 /*
 #define PAGESIZE 4096
@@ -41,21 +51,54 @@ void * page = mmap (NULL, PAGESIZE,
 munmap(page, PAGESIZE);
 */
 
-void free(void *freePtr) {
+/*void * getMemoryInPage(index, size) {
+    void * cheese = NULL;
+    return cheese;
+}*/
 
+
+void * getMemory(size_t size) {
+    
+    int found = -1;
+    int iterator = 0;
+    while (found == -1 || iterator < PAGENUMMAX) {
+        if (size < sizeTable[iterator].size) {
+            found = iterator;
+        }
+        else {
+            iterator++;
+        }
+    }
+    if (found == -1) {
+        int numPages = size / PAGESIZE;
+        void * pages = mmap (NULL, numPages*PAGESIZE,
+                    PROT_READ | PROT_WRITE,
+                    MAP_PRIVATE | MAP_ANONYMOUS, -1, 0);
+        return pages;
+    }
+    else {
+        void * cheese = NULL;
+        return cheese;
+        //return getMemoryInPage(found, size);
+    }
+}
+
+void free(void *freePtr) {
+    munmap(freePtr, PAGESIZE);
 }
 
 void *malloc(size_t size) {
-    void *ptr = NULL;
-    return ptr;
+    void * page = getMemory(size);
+    return page;
 }
 
 void *calloc(size_t count, size_t size) {
-    void *ptr = NULL;
-    return ptr;
+    void * page = getMemory(size);
+    return page;
 }
 
 void *realloc(void *ptr, size_t size) {
-    void *new_ptr = NULL;
+    free(ptr);
+    void * new_ptr = malloc(size);
     return new_ptr;
 }

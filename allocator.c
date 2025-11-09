@@ -17,6 +17,11 @@ typedef struct sizeNode {
     int * ptr;
 } sizeNode;
 
+typedef struct listNode {
+    void * memoryBlock;
+    struct listNode * nextNode;
+} listNode;
+
 sizeNode sizeTable[PAGENUMMAX];
 
 int changed = 0;
@@ -37,13 +42,13 @@ void __attribute__((constructor)) library_init() {
         sizeTable[i].ptr = NULL;
     }
 
-    const char msg[] = "[myalloc] loaded\n";
-    (void)!write(STDERR_FILENO, msg, sizeof msg - 1);
+    //const char msg[] = "[myalloc] loaded\n";
+    //(void)!write(STDERR_FILENO, msg, sizeof msg - 1);
 }
 
 void __attribute__((destructor)) library_cleanup() {
-    //printf("%d", changed);
-    //printf("Unloading library.\n");
+    //const char msg[] = "done\n";
+    //(void)!write(STDERR_FILENO, msg, sizeof msg - 1);
 }
 
 /*
@@ -76,6 +81,17 @@ void * getMemoryInPage(int index, int size) {
         if (page != NULL) {
             
         }
+    }*/
+    /*if (page) {
+
+    }
+    else {
+        page = mmap (NULL, PAGESIZE,
+            PROT_READ | PROT_WRITE,
+            MAP_PRIVATE | MAP_ANONYMOUS, -1, 0);
+        void * blockSize = page;
+        void * np = (char*)page + (4);
+        void * free_list = (char*)page + (12);
     }*/
 
     page = mmap (NULL, PAGESIZE,
@@ -111,13 +127,13 @@ void * getMemory(size_t size) {
         void * pages = mmap (NULL, numPages*PAGESIZE,
                     PROT_READ | PROT_WRITE,
                     MAP_PRIVATE | MAP_ANONYMOUS, -1, 0);
-        const char msg2[] = "big mem\n";
-        (void)!write(STDERR_FILENO, msg2, sizeof msg2 - 1);
+        //const char msg2[] = "big mem\n";
+        //(void)!write(STDERR_FILENO, msg2, sizeof msg2 - 1);
         return pages;
     }
     else {
-        const char msg2[] = "small mem\n";
-        (void)!write(STDERR_FILENO, msg2, sizeof msg2 - 1);
+        //const char msg2[] = "small mem\n";
+        //(void)!write(STDERR_FILENO, msg2, sizeof msg2 - 1);
         return getMemoryInPage(index, size);
     }
 }
@@ -128,11 +144,11 @@ void free(void *freePtr) {
 
 void *malloc(size_t size) {
     changed = 1;
-    const char msg[] = "mallocing\n";
-    (void)!write(STDERR_FILENO, msg, sizeof msg - 1);
+    //const char msg[] = "mallocing\n";
+    //(void)!write(STDERR_FILENO, msg, sizeof msg - 1);
     void * page = getMemory(size);
-    const char msg2[] = "mallocing2\n";
-    (void)!write(STDERR_FILENO, msg2, sizeof msg2 - 1);
+    //const char msg2[] = "mallocing2\n";
+    //(void)!write(STDERR_FILENO, msg2, sizeof msg2 - 1);
     return page;
 }
 

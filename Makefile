@@ -8,6 +8,9 @@ set:
 run:
 	LD_PRELOAD=./libmyalloc.so ./simple_test
 
+valgrind:
+	valgrind --leak-check=full --track-origins=yes env LD_PRELOAD=./libmyalloc.so ./simple_test
+
 gdb:
 	gdb ./simple_test -x init.gdb
 

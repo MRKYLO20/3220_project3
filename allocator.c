@@ -26,15 +26,6 @@ sizeNode sizeTable[PAGENUMMAX];
 
 int changed = 0;
 
-/*int pow(n) {
-    if (n == 0) {
-        return n;
-    }
-    else {
-        return 2 * pow(n - 1);
-    }
-}*/
-
 void __attribute__((constructor)) library_init() {
 
     for (int i = 0; i < PAGENUMMAX; i++) {
@@ -76,24 +67,48 @@ munmap(page, PAGESIZE);
 
 void * getMemoryInPage(int index, int size) {
     void * page = sizeTable[index].ptr;
-    /*int found = 0;
-    while (found == 0) {
-        if (page != NULL) {
-            
-        }
-    }*/
-    /*if (page) {
-
-    }
-    else {
+    if (page == NULL) {
         page = mmap (NULL, PAGESIZE,
             PROT_READ | PROT_WRITE,
             MAP_PRIVATE | MAP_ANONYMOUS, -1, 0);
-        void * blockSize = page;
-        void * np = (char*)page + (4);
-        void * free_list = (char*)page + (12);
-    }*/
+        
+        //align
+        int ptrSize = 8;
 
+        int pos = ptrSize;
+        int * blockSize = page;
+
+        void * np = (char*)page + pos;
+        pos = pos + ptrSize;
+
+        listNode * free_list = (char*)page + pos;
+        pos = pos + ptrSize;
+        
+        //initialize
+        *blockSize = size;
+        *np = NULL;
+
+        listNode * firstNode = (char*)page + pos;
+        pos = pos + sizeof(listNode);
+
+        *free_list = firstNode;
+        listNode * tempNode = firstNode;
+
+        tempNode->memoryBlock = (char*)page + pos;
+        pos = pos + size;
+        
+        //checking the space that the size would fill
+        while (pos + size + (sizeof(listNode)) < PAGESIZE) {
+            listNode * newNode = (char*)page + pos;
+            pos = pos + (sizeof(listNode));
+
+            tempNode->nextNode = newNode;
+            tempNode = tempNode->nextNode;
+
+            tempNode->memoryBlock = (char*)page + pos;
+            pos = pos + size;
+        }
+    }
     page = mmap (NULL, PAGESIZE,
             PROT_READ | PROT_WRITE,
             MAP_PRIVATE | MAP_ANONYMOUS, -1, 0);

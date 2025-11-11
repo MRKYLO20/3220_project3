@@ -10,7 +10,6 @@
 
 #define PAGENUMMAX 10
 #define PAGESIZE 4096
-#define nextPage 2
 #define BIGBLOCKMAX 30
 
 typedef struct sizeNode {
@@ -29,12 +28,12 @@ typedef struct headerStruct {
     void * freeList;
 } headerStruct;
 
+//table to get which size chunks to allocate
 sizeNode sizeTable[PAGENUMMAX];
 
+//list of big blocks that the allocator may need to select
 void * bigBlocks[BIGBLOCKMAX];
 int bigBlockPos = 0;
-
-int changed = 0;
 
 void __attribute__((constructor)) library_init() {
 
@@ -46,15 +45,6 @@ void __attribute__((constructor)) library_init() {
         bigBlocks[i] = NULL;
     }
 }
-
-/*int pos = ptrSize;
-    int * blockSize = page;
-
-    void * np = (char*)page + pos;
-    pos = pos + ptrSize;
-
-    listNode * free_list = (listNode *)((char*)page + pos);
-    pos = pos + ptrSize;*/
 
 void * createNewPage(int chunkSize) {
     void * page = mmap (NULL, PAGESIZE,
@@ -84,7 +74,7 @@ void * createNewPage(int chunkSize) {
 
     //list runs like nextNode(8)|memoryBlockptr(8)|memory
 
-    int itera = 0;
+    //int itera = 0;
     //checking the space that the size would fill
     while (pos + chunkSize + (sizeof(listNode)) < PAGESIZE) {
         listNode * newNode = (listNode *)((char*)page + pos);
@@ -95,10 +85,11 @@ void * createNewPage(int chunkSize) {
 
         tempNode->memoryBlock = (char*)page + pos;
         pos = pos + chunkSize;
-        const char msg[] = "running\n";
-        (void)!write(STDERR_FILENO, msg, sizeof msg - 1);
-        itera++;
+        //const char msg[] = "running\n";
+        //(void)!write(STDERR_FILENO, msg, sizeof msg - 1);
+        //itera++;
     }
+    tempNode->nextNode = NULL;
 
     return page;
 }
@@ -114,8 +105,7 @@ void * getMemoryInPage(int index, int size) {
             sizeTable[index].ptr = page;
         }
         //get header vars
-        int blockSize = ((headerStruct *)page)->blockSize;
-        void * np = ((headerStruct *)page)->np;
+        //int blockSize = ((headerStruct *)page)->blockSize;
         void * freeList = ((headerStruct *)page)->freeList;
 
         //if there is nothing free move to a new page
@@ -126,35 +116,22 @@ void * getMemoryInPage(int index, int size) {
             return target;
         }
         else {
-            const char msg[] = "nothing in free list\n";
-            (void)!write(STDERR_FILENO, msg, sizeof msg - 1);
+            //const char msg[] = "nothing in free list\n";
+            //(void)!write(STDERR_FILENO, msg, sizeof msg - 1);
             page = createNewPage(chunkSize);
-            np = page;
+            ((headerStruct *)page)->np = page;
         }
     }
 
-    page = mmap (NULL, PAGESIZE,
+    /*page = mmap (NULL, PAGESIZE,
             PROT_READ | PROT_WRITE,
-            MAP_PRIVATE | MAP_ANONYMOUS, -1, 0);
+            MAP_PRIVATE | MAP_ANONYMOUS, -1, 0);*/
 
     return page;
 }
 
-
 void * getMemory(size_t size) {
     
-    /*int found = -1;
-    int iterator = 0;
-    while (found == -1 && iterator < PAGENUMMAX) {
-        //const char msg2[] = "mallocing2\n";
-        //(void)!write(STDERR_FILENO, msg2, sizeof msg2 - 1);
-        if (size < sizeTable[iterator].size) {
-            found = iterator;
-        }
-        else {
-            iterator++;
-        }
-    }*/
     int index = ((__builtin_clz(size - 1) - 31) * -1);
     
     //if input is 0 function will give 31. Still going to give 2 bytes if requesting 0
@@ -198,12 +175,7 @@ void free(void *freePtr) {
 }
 
 void *malloc(size_t size) {
-    changed = 1;
-    //const char msg[] = "mallocing\n";
-    //(void)!write(STDERR_FILENO, msg, sizeof msg - 1);
     void * block = getMemory(size);
-    //const char msg2[] = "mallocing2\n";
-    //(void)!write(STDERR_FILENO, msg2, sizeof msg2 - 1);
     return block;
 }
 

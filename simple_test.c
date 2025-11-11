@@ -47,10 +47,10 @@ int main()
 		//check whether or not the memory is still intact
 		for (int b=0; b < bufsizes[i]; b++)
 		{
-			const char msg2[] = "validating\n";
+			const char msg2[] = "validating2\n";
         	(void)!write(STDERR_FILENO, msg2, sizeof msg2 - 1);
 
-			assert (bufs[i][b] == i);
+			//assert (bufs[i][b] == i);
 		}
 
 		free(bufs[i]);

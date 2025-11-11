@@ -11,6 +11,7 @@
 #define PAGENUMMAX 10
 #define PAGESIZE 4096
 #define nextPage 2
+#define BIGBLOCKMAX 30
 
 typedef struct sizeNode {
     int size;
@@ -18,11 +19,20 @@ typedef struct sizeNode {
 } sizeNode;
 
 typedef struct listNode {
-    void * memoryBlock;
     struct listNode * nextNode;
+    void * memoryBlock;
 } listNode;
 
+typedef struct headerStruct {
+    int blockSize;
+    void * np;
+    void * freeList;
+} headerStruct;
+
 sizeNode sizeTable[PAGENUMMAX];
+
+void * bigBlocks[BIGBLOCKMAX];
+int bigBlockPos = 0;
 
 int changed = 0;
 
@@ -32,83 +42,97 @@ void __attribute__((constructor)) library_init() {
         sizeTable[i].size = pow(2, i + 1);
         sizeTable[i].ptr = NULL;
     }
-
-    //const char msg[] = "[myalloc] loaded\n";
-    //(void)!write(STDERR_FILENO, msg, sizeof msg - 1);
+    for (int i = 0; i < BIGBLOCKMAX; i++) {
+        bigBlocks[i] = NULL;
+    }
 }
 
-void __attribute__((destructor)) library_cleanup() {
-    //const char msg[] = "done\n";
-    //(void)!write(STDERR_FILENO, msg, sizeof msg - 1);
+/*int pos = ptrSize;
+    int * blockSize = page;
+
+    void * np = (char*)page + pos;
+    pos = pos + ptrSize;
+
+    listNode * free_list = (listNode *)((char*)page + pos);
+    pos = pos + ptrSize;*/
+
+void * createNewPage(int chunkSize) {
+    void * page = mmap (NULL, PAGESIZE,
+        PROT_READ | PROT_WRITE,
+        MAP_PRIVATE | MAP_ANONYMOUS, -1, 0);
+    
+    //align header
+    int pos = 0;
+    headerStruct * header = page;
+    pos = pos + sizeof(headerStruct);
+    
+    //initialize
+    header->blockSize = chunkSize;
+    header->np = NULL;
+
+    //set first node in sequence
+    listNode * firstNode = (listNode *)((char*)page + pos);
+    pos = pos + sizeof(listNode);
+
+    //set freeList initially to the first node
+    header->freeList = (void *)(firstNode);
+    listNode * tempNode = firstNode;
+    
+    //align memory block
+    tempNode->memoryBlock = (char*)page + pos;
+    pos = pos + chunkSize;
+
+    //list runs like nextNode(8)|memoryBlockptr(8)|memory
+
+    int itera = 0;
+    //checking the space that the size would fill
+    while (pos + chunkSize + (sizeof(listNode)) < PAGESIZE) {
+        listNode * newNode = (listNode *)((char*)page + pos);
+        pos = pos + (sizeof(listNode));
+
+        tempNode->nextNode = newNode;
+        tempNode = tempNode->nextNode;
+
+        tempNode->memoryBlock = (char*)page + pos;
+        pos = pos + chunkSize;
+        const char msg[] = "running\n";
+        (void)!write(STDERR_FILENO, msg, sizeof msg - 1);
+        itera++;
+    }
+
+    return page;
 }
-
-/*
-#define PAGESIZE 4096
-// used for intitializing the memory to zero. (optional)
-int fd = open("/dev/zero", O_RDWR);
-
-// ask the OS to map a page of virtual memory
-// initialized to zero (optional)
-// initializing your memory may make debugging easier
-void * page = mmap (NULL, PAGESIZE,
-                    PROT_READ | PROT_WRITE,
-                    MAP_PRIVATE, fd, 0);
-
-// or if you don't want to zero out the memory
-// you can do it like this
-
-void * page = mmap (NULL, PAGESIZE,
-                    PROT_READ | PROT_WRITE,
-                    MAP_PRIVATE | MAP_ANONYMOUS, -1, 0);
-
-// And, you can unmap the page, when you're done
-munmap(page, PAGESIZE);
-*/
 
 void * getMemoryInPage(int index, int size) {
     void * page = sizeTable[index].ptr;
-    if (page == NULL) {
-        page = mmap (NULL, PAGESIZE,
-            PROT_READ | PROT_WRITE,
-            MAP_PRIVATE | MAP_ANONYMOUS, -1, 0);
-        
-        //align
-        int ptrSize = 8;
+    int chunkSize = sizeTable[index].size;
+    int success = 0;
+    while (success == 0) {
+        //if there is no page create a new one
+        if (page == NULL) {
+            page = createNewPage(chunkSize);
+            sizeTable[index].ptr = page;
+        }
+        //get header vars
+        int blockSize = ((headerStruct *)page)->blockSize;
+        void * np = ((headerStruct *)page)->np;
+        void * freeList = ((headerStruct *)page)->freeList;
 
-        int pos = ptrSize;
-        int * blockSize = page;
-
-        void * np = (char*)page + pos;
-        pos = pos + ptrSize;
-
-        listNode * free_list = (char*)page + pos;
-        pos = pos + ptrSize;
-        
-        //initialize
-        *blockSize = size;
-        *np = NULL;
-
-        listNode * firstNode = (char*)page + pos;
-        pos = pos + sizeof(listNode);
-
-        *free_list = firstNode;
-        listNode * tempNode = firstNode;
-
-        tempNode->memoryBlock = (char*)page + pos;
-        pos = pos + size;
-        
-        //checking the space that the size would fill
-        while (pos + size + (sizeof(listNode)) < PAGESIZE) {
-            listNode * newNode = (char*)page + pos;
-            pos = pos + (sizeof(listNode));
-
-            tempNode->nextNode = newNode;
-            tempNode = tempNode->nextNode;
-
-            tempNode->memoryBlock = (char*)page + pos;
-            pos = pos + size;
+        //if there is nothing free move to a new page
+        if (freeList != NULL) {
+            listNode * target = freeList;
+            freeList = ((listNode*)freeList)->nextNode;
+            success = 1;
+            return target;
+        }
+        else {
+            const char msg[] = "nothing in free list\n";
+            (void)!write(STDERR_FILENO, msg, sizeof msg - 1);
+            page = createNewPage(chunkSize);
+            np = page;
         }
     }
+
     page = mmap (NULL, PAGESIZE,
             PROT_READ | PROT_WRITE,
             MAP_PRIVATE | MAP_ANONYMOUS, -1, 0);
@@ -144,6 +168,8 @@ void * getMemory(size_t size) {
                     MAP_PRIVATE | MAP_ANONYMOUS, -1, 0);
         //const char msg2[] = "big mem\n";
         //(void)!write(STDERR_FILENO, msg2, sizeof msg2 - 1);
+        bigBlocks[bigBlockPos] = pages;
+        bigBlockPos++;
         return pages;
     }
     else {
@@ -154,26 +180,40 @@ void * getMemory(size_t size) {
 }
 
 void free(void *freePtr) {
-    munmap(freePtr, PAGESIZE);
+    void * block = bigBlocks[0];
+    int found = 0;
+    while (block != NULL) {
+        if (block == freePtr) {
+            munmap(freePtr, PAGESIZE);
+            found = 1;
+            break;
+        }
+        else {
+            block = block + 1;
+        }
+    }
+    if (found == 0) {
+        munmap(freePtr, PAGESIZE);
+    }
 }
 
 void *malloc(size_t size) {
     changed = 1;
     //const char msg[] = "mallocing\n";
     //(void)!write(STDERR_FILENO, msg, sizeof msg - 1);
-    void * page = getMemory(size);
+    void * block = getMemory(size);
     //const char msg2[] = "mallocing2\n";
     //(void)!write(STDERR_FILENO, msg2, sizeof msg2 - 1);
-    return page;
+    return block;
 }
 
 void *calloc(size_t count, size_t size) {
-    void * page = getMemory(size);
-    return page;
+    void * block = getMemory(size * count);
+    return block;
 }
 
 void *realloc(void *ptr, size_t size) {
     free(ptr);
-    void * new_ptr = malloc(size);
-    return new_ptr;
+    void * block = malloc(size);
+    return block;
 }

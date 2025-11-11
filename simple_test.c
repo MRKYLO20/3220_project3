@@ -13,9 +13,8 @@ int main()
 
 	uint8_t *bufs[NUMBUFS];
 
-	//void * firstbreak = sbrk(0);
+	void * firstbreak = sbrk(0);
 	
-
 	free(NULL); //just for kicks
 
 	for (int i=0; i < NUMBUFS; i++)
@@ -28,29 +27,39 @@ int main()
 
 		//write some data into the buffer
 		memset(bufs[i], i, bufsizes[i]);
+		for (int b=0; b < bufsizes[i]; b++)
+		{
+			const char msg2[] = "validating\n";
+        	(void)!write(STDERR_FILENO, msg2, sizeof msg2 - 1);
+
+			assert (bufs[i][b] == i);
+		}
 		assert(bufs[i][0] == (uint8_t) i);
 	}
 
 	const char msg2[] = "check here\n";
     (void)!write(STDERR_FILENO, msg2, sizeof msg2 - 1);
-	//void * midbreak = sbrk(0);
-	//assert(firstbreak == midbreak);
+	void * midbreak = sbrk(0);
+	assert(firstbreak == midbreak);
 
 	for (int i=0; i < NUMBUFS; i++)
 	{
 		//check whether or not the memory is still intact
 		for (int b=0; b < bufsizes[i]; b++)
 		{
+			const char msg2[] = "validating\n";
+        	(void)!write(STDERR_FILENO, msg2, sizeof msg2 - 1);
+
 			assert (bufs[i][b] == i);
 		}
 
 		free(bufs[i]);
 	}
 
-	//void * lastbreak = sbrk(0);
+	void * lastbreak = sbrk(0);
 
 	//verify that the program break never moved up.
-	//assert (firstbreak == lastbreak);
+	assert (firstbreak == lastbreak);
 
 	return 0;
 }

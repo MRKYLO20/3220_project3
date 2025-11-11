@@ -26,17 +26,17 @@ typedef struct headerStruct {
     int blockSize;
     void * np;
     void * freeList;
+    void * usedList;
 } headerStruct;
 
 //table to get which size chunks to allocate
-sizeNode sizeTable[PAGENUMMAX];
+static sizeNode sizeTable[PAGENUMMAX];
 
 //list of big blocks that the allocator may need to select
-void * bigBlocks[BIGBLOCKMAX];
-int bigBlockPos = 0;
+static void * bigBlocks[BIGBLOCKMAX];
+static int bigBlockPos = 0;
 
 void __attribute__((constructor)) library_init() {
-
     for (int i = 0; i < PAGENUMMAX; i++) {
         sizeTable[i].size = pow(2, i + 1);
         sizeTable[i].ptr = NULL;
@@ -44,6 +44,33 @@ void __attribute__((constructor)) library_init() {
     for (int i = 0; i < BIGBLOCKMAX; i++) {
         bigBlocks[i] = NULL;
     }
+}
+
+void * freeChunk(void * chunk) {
+    int found = 0;
+    while (found == 0) {
+
+    }
+    return NULL;
+}
+
+void * getChunk(void * page) {
+
+    void * freeList = ((headerStruct *)page)->freeList;
+    void * usedList = ((headerStruct *)page)->usedList;
+
+    listNode * target = freeList;
+    freeList = ((listNode*)freeList)->nextNode;
+
+    if (usedList == NULL) {
+        usedList = target;
+    }
+    else {
+        listNode * temp = usedList;
+        usedList = target;
+        target->nextNode = temp;
+    }
+    return target->memoryBlock;
 }
 
 void * createNewPage(int chunkSize) {
@@ -106,14 +133,14 @@ void * getMemoryInPage(int index, int size) {
         }
         //get header vars
         //int blockSize = ((headerStruct *)page)->blockSize;
+        
         void * freeList = ((headerStruct *)page)->freeList;
 
-        //if there is nothing free move to a new page
+        //if there is nothing free, move to a new page
         if (freeList != NULL) {
-            listNode * target = freeList;
-            freeList = ((listNode*)freeList)->nextNode;
+            void * targetBlock = getChunk(page);
             success = 1;
-            return target;
+            return targetBlock;
         }
         else {
             //const char msg[] = "nothing in free list\n";
@@ -122,10 +149,6 @@ void * getMemoryInPage(int index, int size) {
             ((headerStruct *)page)->np = page;
         }
     }
-
-    /*page = mmap (NULL, PAGESIZE,
-            PROT_READ | PROT_WRITE,
-            MAP_PRIVATE | MAP_ANONYMOUS, -1, 0);*/
 
     return page;
 }

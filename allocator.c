@@ -85,7 +85,7 @@ void * createNewPage(int chunkSize) {
     
     //initialize
     header->blockSize = chunkSize;
-    header->np = NULL;
+
 
     //set first node in sequence
     listNode * firstNode = (listNode *)((char*)page + pos);
@@ -101,7 +101,6 @@ void * createNewPage(int chunkSize) {
 
     //list runs like nextNode(8)|memoryBlockptr(8)|memory
 
-    //int itera = 0;
     //checking the space that the size would fill
     while (pos + chunkSize + (sizeof(listNode)) < PAGESIZE) {
         listNode * newNode = (listNode *)((char*)page + pos);
@@ -112,9 +111,7 @@ void * createNewPage(int chunkSize) {
 
         tempNode->memoryBlock = (char*)page + pos;
         pos = pos + chunkSize;
-        //const char msg[] = "running\n";
-        //(void)!write(STDERR_FILENO, msg, sizeof msg - 1);
-        //itera++;
+
     }
     tempNode->nextNode = NULL;
 
@@ -132,10 +129,9 @@ void * getMemoryInPage(int index, int size) {
             sizeTable[index].ptr = page;
         }
         //get header vars
-        //int blockSize = ((headerStruct *)page)->blockSize;
         
         void * freeList = ((headerStruct *)page)->freeList;
-
+        //verified the same location as in created page
         //if there is nothing free, move to a new page
         if (freeList != NULL) {
             void * targetBlock = getChunk(page);
@@ -143,8 +139,6 @@ void * getMemoryInPage(int index, int size) {
             return targetBlock;
         }
         else {
-            //const char msg[] = "nothing in free list\n";
-            //(void)!write(STDERR_FILENO, msg, sizeof msg - 1);
             page = createNewPage(chunkSize);
             ((headerStruct *)page)->np = page;
         }
@@ -166,15 +160,11 @@ void * getMemory(size_t size) {
         void * pages = mmap (NULL, numPages*PAGESIZE,
                     PROT_READ | PROT_WRITE,
                     MAP_PRIVATE | MAP_ANONYMOUS, -1, 0);
-        //const char msg2[] = "big mem\n";
-        //(void)!write(STDERR_FILENO, msg2, sizeof msg2 - 1);
         bigBlocks[bigBlockPos] = pages;
         bigBlockPos++;
         return pages;
     }
     else {
-        //const char msg2[] = "small mem\n";
-        //(void)!write(STDERR_FILENO, msg2, sizeof msg2 - 1);
         return getMemoryInPage(index, size);
     }
 }

@@ -25,6 +25,7 @@ typedef struct listNode {
 } listNode;
 
 typedef struct headerStruct {
+    int blockSize;
     void * np;
     void * freeList;
 } headerStruct;
@@ -48,6 +49,8 @@ void __attribute__((constructor)) library_init() {
     }
 }
 
+
+
 void freeChunk(void * chunk) {
 
     uintptr_t value = (uintptr_t)chunk;
@@ -60,6 +63,17 @@ void freeChunk(void * chunk) {
     ((headerStruct *)page)->freeList = (listNode*)((char *)chunk - sizeof(listNode *));
     ((listNode*)(((headerStruct *)page)->freeList))->nextNode = firstNode;
 
+}
+
+int getBlockSize(void * chunk) {
+    uintptr_t value = (uintptr_t)chunk;
+    uintptr_t mask = 111;
+    uintptr_t converted = value & ~mask;
+    
+    void * page = (void *)converted;
+
+    int blockSize = ((headerStruct *)page)->blockSize;
+    return blockSize;
 }
 
 void * getChunk(void * page) {
@@ -192,15 +206,18 @@ void *calloc(size_t count, size_t size) {
     size_t trueSize = size * count;
     void * block = getMemory(trueSize);
     //zero out memory
-    memset(block, 0, trueSize);
+    if (block != NULL) {
+        memset(block, 0, trueSize);
+    }
     return block;
 }
 //6 mallocs and 6 frees, calloc 28 calloc 56
 
 void *realloc(void *ptr, size_t size) {
-    //void * copy = ptr;
-    free(ptr);
     void * block = malloc(size);
-    //memcpy(block, copy, size);
+    if (block != NULL) {
+        memcpy(block, ptr, size);
+    }
+    free(ptr);
     return block;
 }

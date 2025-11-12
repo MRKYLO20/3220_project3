@@ -7,6 +7,7 @@
 #include <stdio.h>
 #include <assert.h>
 #include <math.h>
+#include <stdint.h>
 
 #define PAGENUMMAX 10
 #define PAGESIZE 4096
@@ -23,19 +24,19 @@ typedef struct listNode {
 } listNode;
 
 typedef struct headerStruct {
-    int blockSize;
     void * np;
     void * freeList;
-    void * usedList;
 } headerStruct;
 
 //table to get which size chunks to allocate
-static sizeNode sizeTable[PAGENUMMAX];
+sizeNode sizeTable[PAGENUMMAX];
 
 //list of big blocks that the allocator may need to select
-static void * bigBlocks[BIGBLOCKMAX];
-static int bigBlockPos = 0;
 
+//make a uintptr_t do a mask 
+void * bigBlocks[BIGBLOCKMAX];
+int bigBlockPos = 0;
+//set actual freelist not local variable
 void __attribute__((constructor)) library_init() {
     for (int i = 0; i < PAGENUMMAX; i++) {
         sizeTable[i].size = pow(2, i + 1);
@@ -46,30 +47,25 @@ void __attribute__((constructor)) library_init() {
     }
 }
 
-void * freeChunk(void * chunk) {
-    int found = 0;
-    while (found == 0) {
+void freeChunk(void * chunk) {
 
-    }
-    return NULL;
+    uintptr_t value = (uintptr_t)chunk;
+    uintptr_t mask = 111;
+    uintptr_t converted = value & ~mask;
+
+    void * page = (void *)converted;
+    void * firstNode = ((headerStruct *)page)->freeList;
+
+    ((headerStruct *)page)->freeList = (listNode*)((char *)chunk - sizeof(listNode *));
+    ((listNode*)(((headerStruct *)page)->freeList))->nextNode = firstNode;
+
 }
 
 void * getChunk(void * page) {
 
-    void * freeList = ((headerStruct *)page)->freeList;
-    void * usedList = ((headerStruct *)page)->usedList;
+    listNode * target = ((headerStruct *)page)->freeList;
+    ((headerStruct *)page)->freeList = ((listNode*)target)->nextNode;
 
-    listNode * target = freeList;
-    freeList = ((listNode*)freeList)->nextNode;
-
-    if (usedList == NULL) {
-        usedList = target;
-    }
-    else {
-        listNode * temp = usedList;
-        usedList = target;
-        target->nextNode = temp;
-    }
     return target->memoryBlock;
 }
 
@@ -82,10 +78,6 @@ void * createNewPage(int chunkSize) {
     int pos = 0;
     headerStruct * header = page;
     pos = pos + sizeof(headerStruct);
-    
-    //initialize
-    header->blockSize = chunkSize;
-
 
     //set first node in sequence
     listNode * firstNode = (listNode *)((char*)page + pos);
@@ -151,9 +143,9 @@ void * getMemory(size_t size) {
     
     int index = ((__builtin_clz(size - 1) - 31) * -1);
     
-    //if input is 0 function will give 31. Still going to give 2 bytes if requesting 0
+    //if input is 0 function will give 31. Going to return null
     if (index == 31) {
-        index = 0;
+        return NULL;
     }
     if (index >= 10) {
         int numPages = size / PAGESIZE;
@@ -170,20 +162,22 @@ void * getMemory(size_t size) {
 }
 
 void free(void *freePtr) {
-    void * block = bigBlocks[0];
-    int found = 0;
-    while (block != NULL) {
-        if (block == freePtr) {
-            munmap(freePtr, PAGESIZE);
-            found = 1;
-            break;
+    if (freePtr != NULL) {
+        void * block = bigBlocks[0];
+        int found = 0;
+        while (block != NULL) {
+            if (block == freePtr) {
+                munmap(freePtr, PAGESIZE);
+                found = 1;
+                break;
+            }
+            else {
+                block = block + 1;
+            }
         }
-        else {
-            block = block + 1;
+        if (found == 0) {
+            freeChunk(freePtr);
         }
-    }
-    if (found == 0) {
-        munmap(freePtr, PAGESIZE);
     }
 }
 

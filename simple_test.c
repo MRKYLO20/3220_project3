@@ -50,7 +50,7 @@ int main()
 			const char msg2[] = "validating2\n";
         	(void)!write(STDERR_FILENO, msg2, sizeof msg2 - 1);
 
-			//assert (bufs[i][b] == i);
+			assert (bufs[i][b] == i);
 		}
 
 		free(bufs[i]);

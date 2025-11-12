@@ -67,9 +67,10 @@ void * getChunk(void * page) {
     listNode * target = ((headerStruct *)page)->freeList;
     ((headerStruct *)page)->freeList = ((listNode*)target)->nextNode;
 
-    return target->memoryBlock;
+    return &(target->memoryBlock);
+    //getting the value of the bytes when I need the address
 }
-
+//x/64xb
 void * createNewPage(int chunkSize) {
     void * page = mmap (NULL, PAGESIZE,
         PROT_READ | PROT_WRITE,
@@ -194,9 +195,12 @@ void *calloc(size_t count, size_t size) {
     memset(block, 0, trueSize);
     return block;
 }
+//6 mallocs and 6 frees, calloc 28 calloc 56
 
 void *realloc(void *ptr, size_t size) {
+    //void * copy = ptr;
     free(ptr);
     void * block = malloc(size);
+    //memcpy(block, copy, size);
     return block;
 }

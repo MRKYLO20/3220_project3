@@ -8,6 +8,7 @@
 #include <assert.h>
 #include <math.h>
 #include <stdint.h>
+#include <string.h>
 
 #define PAGENUMMAX 10
 #define PAGESIZE 4096
@@ -187,7 +188,10 @@ void *malloc(size_t size) {
 }
 
 void *calloc(size_t count, size_t size) {
-    void * block = getMemory(size * count);
+    size_t trueSize = size * count;
+    void * block = getMemory(trueSize);
+    //zero out memory
+    memset(block, 0, trueSize);
     return block;
 }
 

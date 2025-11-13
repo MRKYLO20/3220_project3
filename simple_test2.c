@@ -5,8 +5,8 @@
 #include <assert.h>
 #include <unistd.h>
 
-#define NUMBUFS 10
-int bufsizes[NUMBUFS] = {2,3,7,14,65,36,700,12,15,64};
+#define NUMBUFS 13
+int bufsizes[NUMBUFS] = {2,3,7,14,65,36,700,12,15,64,2000,5000,3000};
 
 int main()
 {
@@ -22,7 +22,6 @@ int main()
 		//allocate the next block
 		bufs[i] = malloc(bufsizes[i]);
 		assert(bufs[i] != NULL); //should never return NULL
-		
 
 		bufs[i] = realloc(bufs[i], bufsizes[i]);
 		assert(bufs[i] != NULL);

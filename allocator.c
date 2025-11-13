@@ -12,7 +12,7 @@
 
 #define PAGENUMMAX 10
 #define PAGESIZE 4096
-#define BIGBLOCKMAX 30
+#define BIGBLOCKMAX 100
 
 typedef struct sizeNode {
     int size;
@@ -34,10 +34,9 @@ typedef struct headerStruct {
 sizeNode sizeTable[PAGENUMMAX];
 
 //list of big blocks that the allocator may need to select
-
-//make a uintptr_t do a mask 
+//make a uintptr_t do a mask
 void * bigBlocks[BIGBLOCKMAX];
-int bigBlockPos = 0;
+
 //set actual freelist not local variable
 void __attribute__((constructor)) library_init() {
     for (int i = 0; i < PAGENUMMAX; i++) {
@@ -52,7 +51,7 @@ void __attribute__((constructor)) library_init() {
 void freeChunk(void * chunk) {
 
     uintptr_t value = (uintptr_t)chunk;
-    uintptr_t mask = 111;
+    uintptr_t mask = 0xFFF;
     uintptr_t converted = value & ~mask;
 
     void * page = (void *)converted;
@@ -120,6 +119,11 @@ void * createNewPage(int chunkSize) {
 
     }
     tempNode->nextNode = NULL;
+    if ((uintptr_t)page == (uintptr_t)(0x7ffff7fab000)) {
+
+
+
+    }
 
     return page;
 }
@@ -162,12 +166,26 @@ void * getMemory(size_t size) {
         return NULL;
     }
     if (index >= 10) {
-        int numPages = size / PAGESIZE;
-        void * pages = mmap (NULL, numPages*PAGESIZE,
+        void * pages = mmap (NULL, size,
                     PROT_READ | PROT_WRITE,
                     MAP_PRIVATE | MAP_ANONYMOUS, -1, 0);
-        bigBlocks[bigBlockPos] = pages;
-        bigBlockPos++;
+        
+        int iterator = 0;
+
+        while (iterator < BIGBLOCKMAX) {
+            if (bigBlocks[iterator] == NULL) {
+                bigBlocks[iterator] = pages;
+                break;
+            }
+            iterator++;
+        }
+
+        if ((uintptr_t)pages == (uintptr_t)(0x7ffff7fab000)) {
+
+
+
+        }
+
         return pages;
     }
     else {
@@ -177,16 +195,27 @@ void * getMemory(size_t size) {
 
 void free(void *freePtr) {
     if (freePtr != NULL) {
-        void * block = bigBlocks[0];
+
+        if ((uintptr_t)freePtr == (uintptr_t)(0x7ffff7fab000)) {
+
+
+
+        }
+
+        int iterator = 0;
+        void * block = bigBlocks[iterator];
         int found = 0;
-        while (block != NULL) {
+        while (iterator < BIGBLOCKMAX) {
             if (block == freePtr) {
+                
+                bigBlocks[iterator] = NULL;
                 munmap(freePtr, PAGESIZE);
                 found = 1;
                 break;
             }
             else {
-                block = block + 1;
+                iterator++;
+                block = bigBlocks[iterator];
             }
         }
         if (found == 0) {
@@ -213,7 +242,8 @@ void *calloc(size_t count, size_t size) {
 
 void *realloc(void *ptr, size_t size) {
     void * block = malloc(size);
-    if (block != NULL) {
+
+    if (ptr != NULL && block != NULL) {
         memcpy(block, ptr, size);
     }
     free(ptr);

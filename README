@@ -1,0 +1,14 @@
+Jack Nelson
+
+KNOWN PROBLEMS
+
+Currently I have an issue storing large allocations, mainly that the limit is 100 and the
+program has to loop through the array to get the big pages.
+
+DESIGN
+
+For small blocks, I kept a table to hold a list of pages and sizes.
+When finding which size to use, I used the clz formula to automatically place it without looking up
+For large blocks, the system is simpler (array) and slower (looping through) but gets the job done
+I use a lot of help functions to get all this done
+

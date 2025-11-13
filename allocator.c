@@ -34,13 +34,12 @@ typedef struct headerStruct {
 sizeNode sizeTable[PAGENUMMAX];
 
 //list of big blocks that the allocator may need to select
-//make a uintptr_t do a mask
 void * bigBlocks[BIGBLOCKMAX];
 
-//set actual freelist not local variable
 void __attribute__((constructor)) library_init() {
     for (int i = 0; i < PAGENUMMAX; i++) {
         sizeTable[i].size = pow(2, i + 1);
+
         sizeTable[i].ptr = NULL;
     }
     for (int i = 0; i < BIGBLOCKMAX; i++) {
@@ -49,14 +48,14 @@ void __attribute__((constructor)) library_init() {
 }
 
 void freeChunk(void * chunk) {
-
+    //setting a mask for the last 3 bytes to get the page
     uintptr_t value = (uintptr_t)chunk;
     uintptr_t mask = 0xFFF;
     uintptr_t converted = value & ~mask;
 
     void * page = (void *)converted;
     void * firstNode = ((headerStruct *)page)->freeList;
-
+    //putting the chunk back on the free list
     ((headerStruct *)page)->freeList = (listNode*)((char *)chunk - sizeof(listNode *));
     ((listNode*)(((headerStruct *)page)->freeList))->nextNode = firstNode;
 
@@ -119,11 +118,6 @@ void * createNewPage(int chunkSize) {
 
     }
     tempNode->nextNode = NULL;
-    if ((uintptr_t)page == (uintptr_t)(0x7ffff7fab000)) {
-
-
-
-    }
 
     return page;
 }
@@ -138,8 +132,7 @@ void * getMemoryInPage(int index, int size) {
             page = createNewPage(chunkSize);
             sizeTable[index].ptr = page;
         }
-        //get header vars
-        
+
         void * freeList = ((headerStruct *)page)->freeList;
         //verified the same location as in created page
         //if there is nothing free, move to a new page
@@ -180,12 +173,6 @@ void * getMemory(size_t size) {
             iterator++;
         }
 
-        if ((uintptr_t)pages == (uintptr_t)(0x7ffff7fab000)) {
-
-
-
-        }
-
         return pages;
     }
     else {
@@ -195,13 +182,6 @@ void * getMemory(size_t size) {
 
 void free(void *freePtr) {
     if (freePtr != NULL) {
-
-        if ((uintptr_t)freePtr == (uintptr_t)(0x7ffff7fab000)) {
-
-
-
-        }
-
         int iterator = 0;
         void * block = bigBlocks[iterator];
         int found = 0;

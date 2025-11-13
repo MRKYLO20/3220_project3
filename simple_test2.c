@@ -23,8 +23,6 @@ int main()
 		bufs[i] = malloc(bufsizes[i]);
 		assert(bufs[i] != NULL); //should never return NULL
 
-		bufs[i] = realloc(bufs[i], bufsizes[i]);
-		assert(bufs[i] != NULL);
 		//write some data into the buffer
 		memset(bufs[i], i, bufsizes[i]);
 		for (int b=0; b < bufsizes[i]; b++)

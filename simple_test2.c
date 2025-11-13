@@ -1,4 +1,4 @@
-/*#include <stdio.h>
+#include <stdio.h>
 #include <stdint.h>
 #include <stdlib.h>
 #include <string.h>
@@ -14,8 +14,6 @@ int main()
 	uint8_t *bufs[NUMBUFS];
 
 	void * firstbreak = sbrk(0);
-	
-	free(NULL); //just for kicks
 
 	for (int i=0; i < NUMBUFS; i++)
 	{
@@ -24,7 +22,10 @@ int main()
 		//allocate the next block
 		bufs[i] = malloc(bufsizes[i]);
 		assert(bufs[i] != NULL); //should never return NULL
+		
 
+		bufs[i] = realloc(bufs[i], bufsizes[i]);
+		assert(bufs[i] != NULL);
 		//write some data into the buffer
 		memset(bufs[i], i, bufsizes[i]);
 		for (int b=0; b < bufsizes[i]; b++)
@@ -62,4 +63,4 @@ int main()
 	assert (firstbreak == lastbreak);
 
 	return 0;
-}*/
+}

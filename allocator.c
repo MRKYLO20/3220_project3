@@ -49,8 +49,6 @@ void __attribute__((constructor)) library_init() {
     }
 }
 
-
-
 void freeChunk(void * chunk) {
 
     uintptr_t value = (uintptr_t)chunk;

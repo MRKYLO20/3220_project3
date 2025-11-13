@@ -63,7 +63,7 @@ void freeChunk(void * chunk) {
 
 int getBlockSize(void * chunk) {
     uintptr_t value = (uintptr_t)chunk;
-    uintptr_t mask = 111;
+    uintptr_t mask = 0xFFF;
     uintptr_t converted = value & ~mask;
     
     void * page = (void *)converted;
